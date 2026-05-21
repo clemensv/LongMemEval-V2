@@ -89,6 +89,16 @@ def parse_args() -> argparse.Namespace:
 
     parser.add_argument("--prompt-build-max-workers", type=int, default=1)
     parser.add_argument("--shuffle-questions-seed", type=int, default=None)
+    parser.add_argument(
+        "--save-memory",
+        action="store_true",
+        help="Forward to the harness so the built memory artifact is saved to output_dir/memory_state",
+    )
+    parser.add_argument(
+        "--load-memory-dir",
+        default=None,
+        help="Forward to the harness so a previously saved memory artifact is reused instead of rebuilt",
+    )
     return parser.parse_args()
 
 
@@ -288,6 +298,10 @@ def main() -> None:
         harness_argv.append("--reader-disable-thinking")
     if args.shuffle_questions_seed is not None:
         harness_argv.extend(["--shuffle-questions-seed", str(args.shuffle_questions_seed)])
+    if args.save_memory:
+        harness_argv.append("--save-memory")
+    if args.load_memory_dir:
+        harness_argv.extend(["--load-memory-dir", args.load_memory_dir])
     print(json.dumps({"runtime_dir": str(runtime_dir), "method": args.method}, indent=2))
     old_argv = sys.argv
     try:

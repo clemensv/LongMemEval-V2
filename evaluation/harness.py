@@ -273,6 +273,7 @@ def inject_runtime_memory_params(
         "agentrunbook_r",
         "codex",
         "agentrunbook_c",
+        "aimem_lme",
     }:
         return runtime_config
 

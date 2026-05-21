@@ -191,7 +191,7 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument(
         "--evaluator-reasoning-effort",
         choices=["low", "medium", "high"],
-        default="medium",
+        default=None,
     )
     parser.add_argument("--evaluator-max-completion-tokens", type=int, default=4096)
     parser.add_argument("--evaluator-timeout-seconds", type=float, default=43200.0)

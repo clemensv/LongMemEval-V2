@@ -25,6 +25,8 @@ METHODS = {
     "agentrunbook_r",
     "codex",
     "agentrunbook_c",
+    "aimem_lme",
+    "aimem_lme_heuristic",
 }
 
 
@@ -80,8 +82,9 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--codex-max-retries", type=int, default=int(os.getenv("CODEX_MAX_RETRIES", "3")))
 
     parser.add_argument("--evaluator-model", default=os.getenv("EVALUATOR_MODEL", "gpt-5.2"))
+    parser.add_argument("--evaluator-base-url", default=os.getenv("EVALUATOR_BASE_URL"))
     parser.add_argument("--evaluator-api-key-env", default=os.getenv("EVALUATOR_API_KEY_ENV", "OPENAI_API_KEY"))
-    parser.add_argument("--evaluator-reasoning-effort", choices=["low", "medium", "high"], default="medium")
+    parser.add_argument("--evaluator-reasoning-effort", choices=["low", "medium", "high", "none"], default="medium")
     parser.add_argument("--evaluator-max-completion-tokens", type=int, default=4096)
 
     parser.add_argument("--prompt-build-max-workers", type=int, default=1)
@@ -157,6 +160,26 @@ def build_memory_config(args: argparse.Namespace, data_root: Path) -> dict[str, 
                 },
             },
         }
+    if args.method in {"aimem_lme", "aimem_lme_heuristic"}:
+        memory_params: dict[str, object] = {
+            "haystack_id": "default",
+            "max_image_items": 0,
+        }
+        if args.method == "aimem_lme":
+            memory_params["extractor"] = "llm"
+            memory_params["controller_params"] = {
+                "model": args.controller_model,
+                "base_url": args.controller_base_url,
+                "api_key_env": args.controller_api_key_env,
+                "temperature": args.controller_temperature,
+                "top_p": args.controller_top_p,
+                "max_completion_tokens": 4096,
+                "max_retries": 3,
+                "timeout_seconds": 120,
+            }
+        else:
+            memory_params["extractor"] = "heuristic"
+        return {"memory_type": "aimem_lme", "memory_params": memory_params}
     codex_params = {
         "binary": args.codex_binary,
         "model": args.codex_model,
@@ -235,8 +258,6 @@ def main() -> None:
         str(args.reader_temperature),
         "--top-p",
         str(args.reader_top_p),
-        "--top-k",
-        str(args.reader_top_k),
         "--max-completion-tokens",
         str(args.max_completion_tokens),
         "--memory-context-max-tokens",
@@ -249,11 +270,20 @@ def main() -> None:
         args.evaluator_model,
         "--evaluator-api-key-env",
         args.evaluator_api_key_env,
-        "--evaluator-reasoning-effort",
-        args.evaluator_reasoning_effort,
         "--evaluator-max-completion-tokens",
         str(args.evaluator_max_completion_tokens),
     ]
+    if args.evaluator_reasoning_effort and args.evaluator_reasoning_effort != "none":
+        harness_argv.extend(["--evaluator-reasoning-effort", args.evaluator_reasoning_effort])
+    if args.evaluator_base_url:
+        harness_argv.extend(["--evaluator-base-url", args.evaluator_base_url])
+    # ``top_k`` is a vLLM/Qwen-specific sampling parameter that the Azure
+    # OpenAI and OpenAI-direct chat completions APIs reject with HTTP 400.
+    # Only forward it when the caller explicitly opts in via a positive
+    # value (the default 20 is preserved for self-hosted runs through the
+    # READER_TOP_K env var).
+    if args.reader_top_k and args.reader_top_k > 0:
+        harness_argv.extend(["--top-k", str(args.reader_top_k)])
     if not args.reader_enable_thinking:
         harness_argv.append("--reader-disable-thinking")
     if args.shuffle_questions_seed is not None:

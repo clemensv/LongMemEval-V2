@@ -221,3 +221,12 @@ from .codex import CodexMemory  # noqa: E402,F401
 from .agentrunbook_c import AgentRunbookC  # noqa: E402,F401
 from .agentrunbook_r import AgentRunbookR  # noqa: E402,F401
 from .rag import RagMemory  # noqa: E402,F401
+
+# Optional aimem-backed memory backend. The shim re-exports
+# ``AimemLmeMemory`` from the sibling ``aimem-longmemeval`` package
+# (installable from ``C:\git\aimem\longmemeval_prototype``). The try/except
+# keeps the harness usable when the optional package is not installed.
+try:  # noqa: E402
+    from .aimem_lme import AimemLmeMemory  # noqa: F401
+except ImportError:
+    pass

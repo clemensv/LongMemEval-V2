@@ -849,18 +849,27 @@ def build_reader_request(
         "messages": messages,
         "timeout": args.timeout_seconds,
     }
-    if args.base_url:
-        req["max_tokens"] = args.max_completion_tokens
-    else:
+    # Reasoning models (gpt-5* via Azure OpenAI, o-series via OpenAI
+    # direct) reject ``max_tokens`` in favour of
+    # ``max_completion_tokens``. They also reject ``temperature`` /
+    # ``top_p`` / ``presence_penalty``. The presence of
+    # ``--reasoning-effort`` is the cleanest signal that we're talking
+    # to a reasoning model regardless of the endpoint shape.
+    is_reasoning_call = args.reasoning_effort is not None
+    if is_reasoning_call:
         req["max_completion_tokens"] = args.max_completion_tokens
-    if args.reasoning_effort is not None:
         req["reasoning_effort"] = args.reasoning_effort
-    if args.temperature is not None:
-        req["temperature"] = args.temperature
-    if args.top_p is not None:
-        req["top_p"] = args.top_p
-    if args.presence_penalty is not None:
-        req["presence_penalty"] = args.presence_penalty
+    else:
+        if args.base_url:
+            req["max_tokens"] = args.max_completion_tokens
+        else:
+            req["max_completion_tokens"] = args.max_completion_tokens
+        if args.temperature is not None:
+            req["temperature"] = args.temperature
+        if args.top_p is not None:
+            req["top_p"] = args.top_p
+        if args.presence_penalty is not None:
+            req["presence_penalty"] = args.presence_penalty
     extra_body = build_extra_body(args)
     if extra_body is not None:
         req["extra_body"] = extra_body

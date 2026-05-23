@@ -62,6 +62,12 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--max-completion-tokens", type=int, default=20000)
     parser.add_argument("--memory-context-max-tokens", type=int, default=200000)
     parser.add_argument("--reader-enable-thinking", action=argparse.BooleanOptionalAction, default=True)
+    parser.add_argument(
+        "--reader-reasoning-effort",
+        choices=["low", "medium", "high"],
+        default=None,
+        help="Reader reasoning effort (only supported by reasoning models e.g. gpt-5*).",
+    )
 
     parser.add_argument("--controller-model", default=os.getenv("LME_CONTROLLER_MODEL", "Qwen/Qwen3.5-9B"))
     parser.add_argument("--controller-base-url", default=os.getenv("LME_CONTROLLER_BASE_URL", "http://localhost:8023/v1"))
@@ -294,6 +300,8 @@ def main() -> None:
     # READER_TOP_K env var).
     if args.reader_top_k and args.reader_top_k > 0:
         harness_argv.extend(["--top-k", str(args.reader_top_k)])
+    if args.reader_reasoning_effort:
+        harness_argv.extend(["--reasoning-effort", args.reader_reasoning_effort])
     if not args.reader_enable_thinking:
         harness_argv.append("--reader-disable-thinking")
     if args.shuffle_questions_seed is not None:
